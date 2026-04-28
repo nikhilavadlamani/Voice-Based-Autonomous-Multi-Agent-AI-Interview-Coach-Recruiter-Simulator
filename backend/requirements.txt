@@ -6,10 +6,9 @@ pydantic==2.11.3
 pydantic-settings==2.9.1
 langgraph==0.2.67
 langchain==0.3.23
-langchain-openai==0.3.14
 langchain-community==0.3.21
 langchain-text-splitters==0.3.8
 faiss-cpu==1.10.0
 pypdf==5.4.0
 numpy==2.2.5
-openai==1.76.0
+huggingface_hub[inference]==0.34.4

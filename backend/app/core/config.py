@@ -1,17 +1,22 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+ROOT_DIR = Path(__file__).resolve().parents[3]
+ENV_CANDIDATES = [
+    ROOT_DIR / ".env",
+    Path.cwd() / ".env",
+]
+
+
 class Settings(BaseSettings):
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4.1"
-    openai_embedding_model: str = "text-embedding-3-large"
-    openai_tts_model: str = "gpt-4o-mini-tts"
-    openai_whisper_model: str = "whisper-1"
-    elevenlabs_api_key: str = ""
-    hr_voice: str = "alloy"
-    technical_voice: str = "echo"
-    hiring_manager_voice: str = "fable"
-    feedback_voice: str = "nova"
+    hf_token: str = ""
+    hf_provider: str = "hf-inference"
+    hf_chat_model: str = "Qwen/Qwen2.5-72B-Instruct"
+    hf_embedding_model: str = "thenlper/gte-large"
+    hf_tts_model: str = ""
+    hf_asr_model: str = "openai/whisper-large-v3"
     feedback_mode_default: str = "coaching"
     max_turns_per_session: int = 12
     upload_dir: str = "./uploads"
@@ -19,11 +24,10 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_CANDIDATES,
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
 
 settings = Settings()
-

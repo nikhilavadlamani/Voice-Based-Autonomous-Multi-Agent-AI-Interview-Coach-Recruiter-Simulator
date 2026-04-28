@@ -6,7 +6,7 @@ from typing import Any
 
 from app.agents.graph import interview_graph
 from app.core.config import settings
-from app.models.schemas import SessionReport, TranscriptTurn
+from app.models.schemas import SessionReport, SessionSummary, TranscriptTurn
 from app.services.rag_service import rag_service
 from app.services.scoring_service import scoring_service
 
@@ -20,6 +20,7 @@ class SessionState:
     domain_focus: list[str]
     transcript: list[TranscriptTurn] = field(default_factory=list)
     graph_state: dict[str, Any] = field(default_factory=dict)
+    status: str = "ready"
 
 
 class SessionManager:
@@ -28,6 +29,7 @@ class SessionManager:
 
     def create_session(self, candidate_id: str, role: str, interview_mode: str, domain_focus: list[str]) -> SessionState:
         session_id = str(uuid.uuid4())
+        resume_profile = rag_service.get_profile(candidate_id)
         resume_context = rag_service.retrieve_context(candidate_id, f"Summarize candidate fit for {role}")
         session = SessionState(
             session_id=session_id,
@@ -47,13 +49,19 @@ class SessionManager:
                 "difficulty": "medium",
                 "conversation_history": [],
                 "resume_context": resume_context,
+                "resume_summary": resume_profile.get("summary", ""),
+                "resume_highlights": resume_profile.get("highlights", []),
                 "evaluation_notes": [],
                 "confidence_score": 0.5,
                 "communication_score": 0.5,
                 "technical_score": 0.5,
                 "problem_solving_score": 0.5,
                 "should_end": False,
+                "answer_signal": "mixed",
+                "focus_recommendation": "Answer with specific examples and measurable impact.",
+                "planner_rationale": "",
             },
+            status="live",
         )
         self.sessions[session_id] = session
         return session
@@ -78,12 +86,15 @@ class SessionManager:
         if session.graph_state.get("should_end"):
             active_agent = "hiring_manager"
             agent_response = "We have enough signal for today. I am wrapping up the interview and generating your report."
+            session.status = "completed"
 
         return {
             "active_agent": active_agent,
             "agent_response": agent_response,
             "feedback_notes": session.graph_state.get("evaluation_notes", [])[-2:],
             "should_end": session.graph_state.get("should_end", False),
+            "latest_signal": session.graph_state.get("answer_signal", "mixed"),
+            "focus_recommendation": session.graph_state.get("focus_recommendation", ""),
         }
 
     def build_report(self, session_id: str) -> SessionReport:
@@ -105,11 +116,60 @@ class SessionManager:
 
     def greeting(self, session_id: str) -> dict[str, str]:
         session = self.get_session(session_id)
+        highlights = session.graph_state.get("resume_highlights", [])
+        resume_hook = f" I noticed {highlights[0]}." if highlights else ""
         greeting = (
-            f"Welcome. I'm your HR interviewer for this {session.role} simulation. "
-            "We'll begin with your background, then move into technical depth and a hiring manager wrap-up."
+            f"Hi, I'm Maya. I'll be guiding this {session.role} interview today.{resume_hook} "
+            "We'll start with your background, spend some time on technical depth, and then wrap up with a hiring-manager style close. "
+            "Whenever you're ready, introduce yourself the way you would in a real interview and start with the experience that feels most relevant here."
         )
         return {"first_speaker": "hr", "greeting": greeting}
+
+    def session_summary(self, session_id: str) -> SessionSummary:
+        session = self.get_session(session_id)
+        return SessionSummary(
+            session_id=session.session_id,
+            role=session.role,
+            interview_mode=session.interview_mode,
+            turn_count=session.graph_state.get("turn_count", 0),
+            active_agent=session.graph_state.get("active_agent", "hr"),
+            difficulty=session.graph_state.get("difficulty", "medium"),
+            status=session.status if session.status in {"ready", "live", "completed", "closed"} else "live",
+            latest_signal=session.graph_state.get("answer_signal", "mixed"),
+            focus_recommendation=session.graph_state.get("focus_recommendation", ""),
+        )
+
+    def close_session(self, session_id: str) -> SessionSummary:
+        session = self.get_session(session_id)
+        session.status = "closed"
+        return self.session_summary(session_id)
+
+    def reset_session(self, session_id: str) -> SessionSummary:
+        session = self.get_session(session_id)
+        session.transcript.clear()
+        session.graph_state.update(
+            {
+                "turn_count": 0,
+                "active_agent": "hr",
+                "next_action": "ask_follow_up",
+                "difficulty": "medium",
+                "conversation_history": [],
+                "evaluation_notes": [],
+                "confidence_score": 0.5,
+                "communication_score": 0.5,
+                "technical_score": 0.5,
+                "problem_solving_score": 0.5,
+                "should_end": False,
+                "answer_signal": "mixed",
+                "focus_recommendation": "Answer with specific examples and measurable impact.",
+                "planner_rationale": "",
+            }
+        )
+        session.status = "live"
+        session.graph_state.pop("final_report", None)
+        session.graph_state.pop("latest_candidate_answer", None)
+        session.graph_state.pop("last_agent_response", None)
+        return self.session_summary(session_id)
 
 
 session_manager = SessionManager()

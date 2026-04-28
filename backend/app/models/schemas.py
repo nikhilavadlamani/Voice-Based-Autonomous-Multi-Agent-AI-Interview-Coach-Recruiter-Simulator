@@ -8,6 +8,7 @@ class ResumeUploadResponse(BaseModel):
     filename: str
     chunks_indexed: int
     extracted_summary: str
+    resume_highlights: list[str] = Field(default_factory=list)
 
 
 class SessionCreateRequest(BaseModel):
@@ -21,6 +22,18 @@ class SessionCreateResponse(BaseModel):
     session_id: str
     greeting: str
     first_speaker: str
+
+
+class SessionSummary(BaseModel):
+    session_id: str
+    role: str
+    interview_mode: Literal["strict", "coaching"]
+    turn_count: int
+    active_agent: str
+    difficulty: str
+    status: Literal["ready", "live", "completed", "closed"]
+    latest_signal: str
+    focus_recommendation: str
 
 
 class TranscriptTurn(BaseModel):
@@ -46,4 +59,3 @@ class SessionReport(BaseModel):
     weaknesses: list[str]
     improvement_roadmap: list[str]
     transcript: list[TranscriptTurn]
-

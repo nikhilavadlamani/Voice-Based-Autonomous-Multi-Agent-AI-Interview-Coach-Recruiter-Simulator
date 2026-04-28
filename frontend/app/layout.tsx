@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Voice-Based Autonomous Multi-Agent AI Interview Coach",
-  description: "Real-time multi-agent AI recruiter simulator with voice, planner orchestration, and resume-aware questioning."
+  title: "Northstar Interview AI",
+  description: "Human-sounding voice interview practice with resume-aware prompts, smarter follow-ups, and instant coaching."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -13,4 +13,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

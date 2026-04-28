@@ -3,7 +3,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.models.schemas import SessionCreateRequest, SessionCreateResponse, TranscriptTurn
+from app.models.schemas import SessionCreateRequest, SessionCreateResponse, SessionSummary, TranscriptTurn
 from app.services.session_manager import session_manager
 from app.services.stt_service import stt_service
 from app.services.tts_service import tts_service
@@ -26,6 +26,21 @@ async def create_session(payload: SessionCreateRequest) -> SessionCreateResponse
 @router.get("/sessions/{session_id}/report")
 async def get_report(session_id: str):
     return session_manager.build_report(session_id)
+
+
+@router.get("/sessions/{session_id}", response_model=SessionSummary)
+async def get_session_summary(session_id: str) -> SessionSummary:
+    return session_manager.session_summary(session_id)
+
+
+@router.post("/sessions/{session_id}/reset", response_model=SessionSummary)
+async def reset_session(session_id: str) -> SessionSummary:
+    return session_manager.reset_session(session_id)
+
+
+@router.delete("/sessions/{session_id}", response_model=SessionSummary)
+async def close_session(session_id: str) -> SessionSummary:
+    return session_manager.close_session(session_id)
 
 
 @router.websocket("/ws/interview/{session_id}")
@@ -66,9 +81,12 @@ async def interview_socket(websocket: WebSocket, session_id: str):
                 {
                     "type": "agent_turn",
                     "agent": outcome["active_agent"],
+                    "candidate_text": candidate_text,
                     "text": outcome["agent_response"],
                     "feedback_notes": outcome["feedback_notes"],
                     "should_end": outcome["should_end"],
+                    "latest_signal": outcome["latest_signal"],
+                    "focus_recommendation": outcome["focus_recommendation"],
                     "audio_base64": tts_service.synthesize(outcome["agent_response"], outcome["active_agent"]),
                 }
             )

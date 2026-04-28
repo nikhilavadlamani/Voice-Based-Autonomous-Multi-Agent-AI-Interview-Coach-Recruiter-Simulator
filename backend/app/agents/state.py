@@ -16,6 +16,8 @@ class InterviewState(TypedDict, total=False):
     conversation_history: list[dict[str, Any]]
     latest_candidate_answer: str
     resume_context: str
+    resume_summary: str
+    resume_highlights: list[str]
     evaluation_notes: list[str]
     confidence_score: float
     communication_score: float
@@ -25,4 +27,6 @@ class InterviewState(TypedDict, total=False):
     current_prompt: str
     last_agent_response: str
     final_report: dict[str, Any]
-
+    answer_signal: str
+    focus_recommendation: str
+    planner_rationale: str
