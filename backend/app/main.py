@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.resume import router as resume_router
@@ -38,3 +40,6 @@ async def health() -> dict:
 app.include_router(resume_router, prefix="/api/v1")
 app.include_router(session_router, prefix="/api/v1")
 
+frontend_out_dir = Path(__file__).resolve().parents[3] / "frontend" / "out"
+if frontend_out_dir.exists():
+    app.mount("/", StaticFiles(directory=frontend_out_dir, html=True), name="frontend")

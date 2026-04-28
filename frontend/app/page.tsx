@@ -72,7 +72,7 @@ declare global {
   }
 }
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api/v1";
+const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "/api/v1";
 
 const interviewerMeta: Record<string, { name: string; role: string }> = {
   hr: { name: "Maya", role: "HR Interviewer" },
@@ -146,6 +146,29 @@ export default function HomePage() {
   const sessionReady = Boolean(resumeData);
   const interviewReady = Boolean(session && wsReady && summary?.status !== "closed");
 
+  function resolveApiBase(): string {
+    if (/^https?:\/\//.test(apiBase)) {
+      return apiBase;
+    }
+    if (typeof window === "undefined") {
+      return apiBase;
+    }
+    return new URL(apiBase, window.location.origin).toString();
+  }
+
+  function resolveWebSocketUrl(sessionId: string): string {
+    if (typeof window !== "undefined") {
+      const originProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsOrigin = `${originProtocol}//${window.location.host}`;
+      return `${wsOrigin}/api/v1/ws/interview/${sessionId}`;
+    }
+
+    const wsBase = apiBase.replace("/api/v1", "");
+    const wsProtocol = wsBase.startsWith("https://") ? "wss://" : "ws://";
+    const wsHost = wsBase.replace(/^https?:\/\//, "");
+    return `${wsProtocol}${wsHost}/api/v1/ws/interview/${sessionId}`;
+  }
+
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
   }, [turns, draftTranscript]);
@@ -183,7 +206,7 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append("file", resume);
 
-      const response = await fetch(`${apiBase}/resume/upload`, {
+      const response = await fetch(`${resolveApiBase()}/resume/upload`, {
         method: "POST",
         body: formData,
       });
@@ -210,7 +233,7 @@ export default function HomePage() {
     setIsBusy(true);
     try {
       setStatus("Setting up your interview room.");
-      const response = await fetch(`${apiBase}/sessions`, {
+      const response = await fetch(`${resolveApiBase()}/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -252,10 +275,7 @@ export default function HomePage() {
 
   function connectSocket(sessionId: string) {
     socketRef.current?.close();
-    const wsBase = apiBase.replace("/api/v1", "");
-    const wsProtocol = wsBase.startsWith("https://") ? "wss://" : "ws://";
-    const wsHost = wsBase.replace(/^https?:\/\//, "");
-    const ws = new WebSocket(`${wsProtocol}${wsHost}/api/v1/ws/interview/${sessionId}`);
+    const ws = new WebSocket(resolveWebSocketUrl(sessionId));
 
     ws.onopen = () => {
       setWsReady(true);
@@ -344,7 +364,7 @@ export default function HomePage() {
 
     setIsBusy(true);
     try {
-      const response = await fetch(`${apiBase}/sessions/${summary.session_id}/reset`, { method: "POST" });
+      const response = await fetch(`${resolveApiBase()}/sessions/${summary.session_id}/reset`, { method: "POST" });
       if (!response.ok) {
         throw new Error(`Session reset failed with status ${response.status}`);
       }
@@ -381,7 +401,7 @@ export default function HomePage() {
 
     setIsBusy(true);
     try {
-      const response = await fetch(`${apiBase}/sessions/${summary.session_id}`, { method: "DELETE" });
+      const response = await fetch(`${resolveApiBase()}/sessions/${summary.session_id}`, { method: "DELETE" });
       if (!response.ok) {
         throw new Error(`Session close failed with status ${response.status}`);
       }

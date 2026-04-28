@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: interview-agent
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: HF_TOKEN
+        sync: false
+      - key: HF_PROVIDER
+        value: hf-inference
+      - key: HF_CHAT_MODEL
+        value: Qwen/Qwen2.5-72B-Instruct
+      - key: HF_EMBEDDING_MODEL
+        value: thenlper/gte-large
+      - key: HF_TTS_MODEL
+        sync: false
+      - key: HF_ASR_MODEL
+        value: openai/whisper-large-v3
+      - key: FEEDBACK_MODE_DEFAULT
+        value: coaching
+      - key: MAX_TURNS_PER_SESSION
+        value: 12
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: VECTOR_STORE_DIR
+        value: ./data/faiss
+      - key: FRONTEND_ORIGIN
+        sync: false
